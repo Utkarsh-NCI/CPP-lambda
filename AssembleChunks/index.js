@@ -34,6 +34,7 @@ exports.handler = async (event, context) => {
     await uploadToS3(fileName, mergedData, IMAGES_BUCKET);
     s3url = await getS3Url(fileName, IMAGES_BUCKET);
     await uploadMetadata(fileName, s3url);
+    await deleteChunks(fileName, numberOfChunks);
   }
 
   const response = {
@@ -72,4 +73,17 @@ const uploadMetadata = async (fileName, s3url) => {
     Item: item,
   };
   await dynamodb.putItem(params).promise();
+};
+
+const deleteChunks = async (fileName, numberOfChunks) => {
+  let _promises = [];
+  for (let i = 0; i < numberOfChunks; i++) {
+    const chunkKey = `${fileName}_${i}`;
+    const params = {
+      Bucket: BUCKET,
+      Key: chunkKey,
+    };
+    _promises.push(s3.deleteObject(params).promise());
+  }
+  let res = await Promise.all(_promises);
 };
